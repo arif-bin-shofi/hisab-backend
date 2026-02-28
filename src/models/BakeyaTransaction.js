@@ -4,18 +4,27 @@ const bakeyaSchema = new mongoose.Schema(
   {
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Customer"
+      ref: "Customer",
+      required: true
     },
 
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
+      ref: "User",
+      required: true
     },
 
     date: { type: Date, required: true },
-    description: String,
+    
+
+    description: { type: String, default: "" },
+
+    rate: { type: Number, default: 0 },
+
+    quantity: { type: Number, default: 1 },
 
     bakeyaAmount: { type: Number, default: 0 },
+
     paidAmount: { type: Number, default: 0 }
   },
   { timestamps: true }
