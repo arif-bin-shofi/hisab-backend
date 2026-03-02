@@ -9,9 +9,6 @@ connectDB();
 
 const PORT = process.env.PORT || 5000;
 
-
-
-// 🔹 Get Local IP Function
 const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
   

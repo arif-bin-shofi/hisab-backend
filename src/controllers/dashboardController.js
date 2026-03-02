@@ -8,13 +8,10 @@ export const getDashboard = async (req, res) => {
 
     const userId = new mongoose.Types.ObjectId(req.user.id);
 
-    // 🔹 Total Customers
     const totalCustomers = await Customer.countDocuments({ userId });
 
-    // 🔹 Total Hisab Entry
     const totalHisab = await DailyHisab.countDocuments({ userId });
 
-    // 🔹 Total Income (All time total)
     const totalIncomeAgg = await DailyHisab.aggregate([
       { $match: { userId } },
       {
@@ -27,7 +24,6 @@ export const getDashboard = async (req, res) => {
 
     const totalIncome = totalIncomeAgg[0]?.total || 0;
 
-    // 🔹 Total Due (Bakeya Calculation)
     const totalDueAgg = await Bakeya.aggregate([
       { $match: { userId } },
       {
@@ -44,7 +40,6 @@ export const getDashboard = async (req, res) => {
         ? totalDueAgg[0].totalBakeya - totalDueAgg[0].totalPaid
         : 0;
 
-    // 🔹 Today Summary
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -67,7 +62,6 @@ export const getDashboard = async (req, res) => {
     const todayTotal = todayAgg[0]?.total || 0;
     const todayProfit = todayAgg[0]?.profit || 0;
 
-    // 🔹 Last 7 Days Report
     const last7Days = new Date();
     last7Days.setDate(last7Days.getDate() - 7);
 
@@ -90,7 +84,6 @@ export const getDashboard = async (req, res) => {
       { $sort: { "_id.day": 1 } }
     ]);
 
-    // 🔹 Monthly Summary
     const monthlyReport = await DailyHisab.aggregate([
       { $match: { userId } },
       {

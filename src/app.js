@@ -14,9 +14,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* ===============================
-   🏠 Home Route
-================================= */
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -25,9 +22,7 @@ app.get("/", (req, res) => {
   });
 });
 
-/* ===============================
-   🔗 API Routes
-================================= */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/hisab", hisabRoutes);
 app.use("/api/customer", customerRoutes);
