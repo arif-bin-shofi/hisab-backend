@@ -8,6 +8,12 @@ const bakeyaSchema = new mongoose.Schema(
       required: true
     },
 
+    relatedTransactionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BakeyaTransaction",
+      default: null
+    },
+
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

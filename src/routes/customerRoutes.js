@@ -6,13 +6,15 @@ import {
   updateCustomer,
   deleteCustomer,
   addBakeya,
+  customerReport,
+  getDueCustomers,
   getBakeyas,
   getBakeyaById,
   updateBakeya,
   deleteBakeya,
-  customerReport,
+
   getAllReports,
-  getDueCustomers
+
 } from "../controllers/customerController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -36,8 +38,11 @@ router.route("/bakeya/:id")
   .put(protect, updateBakeya)    
   .delete(protect, deleteBakeya);  
 
-router.get("/report/:id", protect, customerReport);   
 router.get("/reports/all", protect, getAllReports);    
 router.get("/reports/due/customers", protect, getDueCustomers); 
+
+router.post("/bakeya", protect, addBakeya);
+router.get("/report/:id", protect, customerReport);
+router.get("/reports/due/customers", protect, getDueCustomers);
 
 export default router;

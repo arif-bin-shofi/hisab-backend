@@ -1,111 +1,70 @@
-import DailyHisab from "../models/DailyHisab.js";
 import Customer from "../models/Customer.js";
 import Bakeya from "../models/BakeyaTransaction.js";
 import mongoose from "mongoose";
 
 export const getDashboard = async (req, res) => {
   try {
-
     const userId = new mongoose.Types.ObjectId(req.user.id);
 
     const totalCustomers = await Customer.countDocuments({ userId });
 
-    const totalHisab = await DailyHisab.countDocuments({ userId });
-
-    const totalIncomeAgg = await DailyHisab.aggregate([
+     const stats = await Bakeya.aggregate([
       { $match: { userId } },
       {
-        $group: {
-          _id: null,
-          total: { $sum: "$todayTotal" }
+        $lookup: {
+          from: "bakeyatransactions", 
+          localField: "relatedTransactionId",
+          foreignField: "_id",
+          as: "parent"
         }
-      }
-    ]);
-
-    const totalIncome = totalIncomeAgg[0]?.total || 0;
-
-    const totalDueAgg = await Bakeya.aggregate([
-      { $match: { userId } },
+      },
+      {
+        $project: {
+          bakeyaAmount: 1,
+          paidAmount: 1,
+          relatedTransactionId: 1,
+       
+          category: {
+            $cond: [
+              { $gt: [{ $size: "$parent" }, 0] },
+              { $arrayElemAt: ["$parent.description", 0] },
+              "$description"
+            ]
+          }
+        }
+      },
       {
         $group: {
-          _id: null,
+          _id: "$category",
           totalBakeya: { $sum: "$bakeyaAmount" },
-          totalPaid: { $sum: "$paidAmount" }
+          totalInstallments: { 
+            $sum: { $cond: ["$relatedTransactionId", "$paidAmount", 0] } 
+          }
         }
       }
     ]);
 
-    const totalDue =
-      totalDueAgg.length > 0
-        ? totalDueAgg[0].totalBakeya - totalDueAgg[0].totalPaid
-        : 0;
+    const getDue = (cat) => {
+      const item = stats.find(s => s._id === cat);
+      return item ? (item.totalBakeya - item.totalInstallments) : 0;
+    };
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const todayAgg = await DailyHisab.aggregate([
-      {
-        $match: {
-          userId,
-          date: { $gte: todayStart }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$todayTotal" },
-          profit: { $sum: "$profitLoss" }
-        }
-      }
-    ]);
-
-    const todayTotal = todayAgg[0]?.total || 0;
-    const todayProfit = todayAgg[0]?.profit || 0;
-
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
-
-    const weeklyReport = await DailyHisab.aggregate([
-      {
-        $match: {
-          userId,
-          date: { $gte: last7Days }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            day: { $dayOfMonth: "$date" },
-            month: { $month: "$date" }
-          },
-          total: { $sum: "$todayTotal" }
-        }
-      },
-      { $sort: { "_id.day": 1 } }
-    ]);
-
-    const monthlyReport = await DailyHisab.aggregate([
-      { $match: { userId } },
-      {
-        $group: {
-          _id: { month: { $month: "$date" } },
-          total: { $sum: "$todayTotal" }
-        }
-      },
-      { $sort: { "_id.month": 1 } }
-    ]);
+    const mobileDue = getDue("মোবাইল ব্যাংকিং");
+    const computerDue = getDue("কম্পিউটার সার্ভিস");
+    const productDue = getDue("পণ্য বিক্রয়");
+    
+    const totalDue = stats.reduce((sum, s) => sum + (s.totalBakeya - s.totalInstallments), 0);
 
     res.json({
       success: true,
       data: {
         totalCustomers,
-        totalHisab,
-        totalIncome,
         totalDue,
-        todayTotal,
-        todayProfit,
-        weeklyReport,
-        monthlyReport
+        categories: {
+          mobile: mobileDue,
+          computer: computerDue,
+          product: productDue
+        }
       }
     });
 

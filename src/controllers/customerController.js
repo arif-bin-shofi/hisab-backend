@@ -93,18 +93,11 @@ export const updateCustomer = async (req, res) => {
 
 export const deleteCustomer = async (req, res) => {
   try {
-
-    const hasTransactions = await Bakeya.exists({ 
+  
+    await Bakeya.deleteMany({ 
       customerId: req.params.id,
       userId: req.user.id 
     });
-
-    if (hasTransactions) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot delete customer with existing bakeya transactions. Delete transactions first."
-      });
-    }
 
     const customer = await Customer.findOneAndDelete({
       _id: req.params.id,
@@ -112,38 +105,24 @@ export const deleteCustomer = async (req, res) => {
     });
 
     if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found"
-      });
+      return res.status(404).json({ message: "Customer not found" });
     }
 
-    res.json({
-      success: true,
-      message: "Customer deleted successfully"
-    });
+    res.json({ success: true, message: "Customer and all transactions deleted" });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-
 export const addBakeya = async (req, res) => {
   try {
-  
     const customer = await Customer.findOne({
       _id: req.body.customerId,
       userId: req.user.id
     });
 
     if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found"
-      });
+      return res.status(404).json({ success: false, message: "Customer not found" });
     }
 
     const bakeya = await Bakeya.create({
@@ -151,18 +130,60 @@ export const addBakeya = async (req, res) => {
       userId: req.user.id
     });
 
-    res.status(201).json({
-      success: true,
-      data: bakeya
-    });
+    res.status(201).json({ success: true, data: bakeya });
   } catch (error) {
-    res.status(400).json({ 
-      success: false, 
-      message: error.message 
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
+export const customerReport = async (req, res) => {
+  try {
+    const customer = await Customer.findOne({
+      _id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+
+    const transactions = await Bakeya.find({
+      customerId: req.params.id,
+      userId: req.user.id
+    }).sort({ date: -1 });
+
+    let totalBakeya = 0;
+    let totalPaidAgainstBakeya = 0;
+
+    transactions.forEach(t => {
+    
+      totalBakeya += t.bakeyaAmount || 0;
+      
+      if (t.relatedTransactionId) {
+        totalPaidAgainstBakeya += t.paidAmount || 0;
+      }
+    });
+
+    const totalDue = totalBakeya - totalPaidAgainstBakeya;
+
+    res.json({
+      success: true,
+      data: {
+        customer,
+        summary: {
+          totalTransactions: transactions.length,
+          totalBakeya,
+          totalPaid: totalPaidAgainstBakeya, 
+          totalDue,
+          status: totalDue <= 0 ? 'Cleared' : 'Due'
+        },
+        transactions
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 export const getBakeyas = async (req, res) => {
   try {
     const { customerId } = req.query;
@@ -270,62 +291,6 @@ export const deleteBakeya = async (req, res) => {
   }
 };
 
-
-export const customerReport = async (req, res) => {
-  try {
-    const customer = await Customer.findOne({
-      _id: req.params.id,
-      userId: req.user.id
-    });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found"
-      });
-    }
-
-    const transactions = await Bakeya.find({
-      customerId: req.params.id,
-      userId: req.user.id
-    }).sort({ date: -1 });
-
-    let totalBakeya = 0;
-    let totalPaid = 0;
-    let totalDue = 0;
-
-    transactions.forEach(t => {
-      totalBakeya += t.bakeyaAmount;
-      totalPaid += t.paidAmount;
-      totalDue += t.bakeyaAmount - t.paidAmount;
-    });
-
-    res.json({
-      success: true,
-      data: {
-        customer: {
-          id: customer._id,
-          name: customer.name,
-          phone: customer.phone,
-          address: customer.address
-        },
-        summary: {
-          totalTransactions: transactions.length,
-          totalBakeya,
-          totalPaid,
-          totalDue,
-          status: totalDue === 0 ? 'Cleared' : totalDue > 0 ? 'Due' : 'Overpaid'
-        },
-        transactions
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
-};
 
 export const getAllReports = async (req, res) => {
   try {

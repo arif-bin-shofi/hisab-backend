@@ -3,7 +3,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import authRoutes from "./routes/authRoutes.js";
-import hisabRoutes from "./routes/hisabRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 
@@ -24,7 +23,6 @@ app.get("/", (req, res) => {
 
 
 app.use("/api/auth", authRoutes);
-app.use("/api/hisab", hisabRoutes);
 app.use("/api/customer", customerRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
